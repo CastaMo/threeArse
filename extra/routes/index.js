@@ -7,6 +7,7 @@ var path = require("path");
 var fs = require("fs");
 var stream = require("stream");
 
+var sdk = require("../sdk");
 
 module.exports = function() {
 
@@ -25,7 +26,21 @@ module.exports = function() {
 		var file_path = path.join(__dirname, "../empty.txt");
 		var stream = fs.createReadStream(file_path);
 		stream.push(dataBuffer);
-		stream.pipe(res);
+		var ContentLength = dataBuffer.length,
+            Body = stream,
+            Key = "test/1.jpg",
+            Bucket = "threearse",
+            Region = "cn-south";
+        sdk.cosAPI.putObject({
+            ContentLength: ContentLength,
+            Body: Body,
+            Bucket: Bucket,
+            Region: Region,
+            Key: Key
+        }, function(err, result) {
+            console.log(arguments);
+            res.send(result);
+        });
 	});
 
 	return router;
