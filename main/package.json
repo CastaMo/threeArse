@@ -1,0 +1,21 @@
+{
+  "name": "printer",
+  "version": "1.0.0",
+  "description": "A printer project",
+  "author": "Guanzhao Mo <502442134@qq.com>",
+  "private": true,
+  "scripts": {},
+  "dependencies": {},
+  "devDependencies": {
+    "body-parser": "^1.17.1",
+    "compression": "^1.6.2",
+    "ejs-mate": "^2.3.0",
+    "express": "^4.15.2",
+    "morgan": "^1.8.1",
+    "qr-image": "^3.2.0"
+  },
+  "engines": {
+    "node": ">= 4.0.0",
+    "npm": ">= 3.0.0"
+  }
+}
