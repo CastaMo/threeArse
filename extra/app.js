@@ -21,7 +21,7 @@ var compression = require('compression');
 var path = require("path");
 
 
-app.use(compression());  
+app.use(compression());
 
 
 app.set('views', path.join(__dirname, ""));
