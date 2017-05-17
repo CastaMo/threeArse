@@ -23,9 +23,6 @@ var args = system.args;
 // var args = process.argv;
 
 
-var h5 = args[1],
-	me = args[2];
-
 // var h5 = "http://localhost:8888/qrcode/get?dest=http://www.baidu.com",
 // 	me = "http://threearse-1252859479.picgz.myqcloud.com/test/2.jpeg?imageView2";
 
@@ -33,8 +30,13 @@ template_path = "http://localhost:8888/template/result";
 //template_path = "file:///C:/Users/binl/Desktop/printer/hw2-table-sorter-master/13331202_%E8%8E%AB%E5%86%A0%E9%92%8A/index.html";
 
 var querys = [
-	"h5=" + h5,
-	"me=" + me
+	"h5=" + args[1],
+	"me=" + args[2],
+	"datetime=" + args[3],
+	"gender=" + encodeURIComponent(args[4]),
+	"age=" + args[5],
+	"energy=" + args[6],
+	"number=" + args[7],
 ];
 
 var result = [

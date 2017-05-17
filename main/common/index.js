@@ -2,15 +2,11 @@ var spawnSync = require("child_process").spawnSync;
 var spawn = require("child_process").spawn;
 
 
-exports.parseAndPrint = function parseAndPrint(options, callback) {
+exports.parseAndPrint = function parseAndPrint(options_args, callback) {
 	console.log("start parse");
 
 
-	var pjs_args = [
-		"common/p.js",
-		options.h5,
-		options.me
-	];
+	var pjs_args = ["common/p.js"].concat(options_args);
 
 	console.log(pjs_args);
 
