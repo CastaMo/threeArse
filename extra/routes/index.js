@@ -9,11 +9,17 @@ var stream = require("stream");
 
 var sdk = require("../sdk");
 
+var qr = require('qr-image');
+
 module.exports = function() {
 
 
 	router.get("/template/result", function(req, res, next) {
-		res.render("template/demo");
+		res.render("template/demo", {
+			data: {
+				h5_url: "http://localhost:8888/qrcode/get?dest=http://www.baidu.com"
+			}
+		});
 	});
 
 
@@ -41,6 +47,14 @@ module.exports = function() {
             console.log(arguments);
             res.send(result);
         });
+	});
+
+	router.get("/qrcode/get", function(req, res, next) {
+		var dest = req.query.dest;
+
+		var img = qr.image(dest,{size :30});
+        img.pipe(res);
+
 	});
 
 	return router;
