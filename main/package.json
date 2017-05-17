@@ -11,9 +11,11 @@
     "compression": "^1.6.2",
     "cos-nodejs-sdk-v5": "^1.0.0",
     "ejs-mate": "^2.3.0",
+    "eventproxy": "^0.3.5",
     "express": "^4.15.2",
     "morgan": "^1.8.1",
-    "qr-image": "^3.2.0"
+    "qr-image": "^3.2.0",
+    "request": "^2.81.0"
   },
   "engines": {
     "node": ">= 4.0.0",
