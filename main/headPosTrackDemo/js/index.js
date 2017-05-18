@@ -71,17 +71,18 @@ var Processor = function(canvasid) {
 	this.STATE = {
 		"waiting": 0,
 		"running": 1,
-		"outputing": 2
+		"outputing": 2,
+		"tip": 3,
 	};
 	this.state = this.STATE.waiting;
 	this.startTime = 0;
-	this.maxTime = 10000;
+	this.maxTime = 15000;
 	this.emotionsRecord = "";
 	this.faceBase64Data = "";
 	this.emotionBase64Data = "";
 	this.age = 19;
 	this.gender = "unknown";
-	this.energy = 52356;
+	this.energy = Math.floor(Math.random()*100000);
 
 	this.currentNoiseWrinke = 0;
 	this.targetNoiseWrinke = 0;
@@ -105,6 +106,14 @@ var Processor = function(canvasid) {
 	this.faceRect = [0, 0, 0, 0];
 	this.noseImg = new Image();
 	this.noseImg.src="./img/nose.png"
+	this.waitingImg = new Image();
+	this.waitingImg.src="./img/waiting.png"
+	this.outputingImg = new Image();
+	this.outputingImg.src="./img/outputing.png"
+	this.takeListImg = new Image();
+	this.takeListImg.src="./img/takeList.png"
+	this.pointImg = new Image();
+	this.pointImg.src="./img/point.png"
 
 	this.init = function() {
 		//this.faceImageCanvas = document.getElementById("face_video_canvas");
@@ -118,6 +127,11 @@ var Processor = function(canvasid) {
 	    this.emotionImgCanvas.width = 600;
 	    this.emotionImgCanvas.height = 600;
 	    this.emotionImgCtx = this.emotionImgCanvas.getContext("2d");
+
+	    this.loadImages();
+	}
+	this.loadImages = function() {
+
 	}
 
 	this.getFaceBase64 = function()  {
@@ -144,7 +158,7 @@ var Processor = function(canvasid) {
 
 		var postData = { 
 			"time": this.startTime,
-			"energy": this.energy,
+			"energy": this.getEnergy(this.emotionsRecord),
 			"gender": this.gender,
 			"age": this.age,
 			"emotions": this.emotionsRecord,
@@ -161,13 +175,40 @@ var Processor = function(canvasid) {
 		}).done(function( msg ) {
 			if (msg.code == 0) {
 				alert("OKOKOKOK 得到了本地服务器的成功返回")
-				processor.state = processor.STATE.waiting;
+				processor.state = processor.STATE.tip;
+				setTimeout("processor.state = processor.STATE.waiting;", 5000)
 			} else {
 				alert("得不到成功返回呀")
-				processor.state = processor.STATE.waiting;
+				processor.state = processor.STATE.tip;
+				setTimeout("processor.state = processor.STATE.waiting;", 5000)
 			}
 		});
 
+	}
+
+	this.getEnergy = function(emotionRecoed) {
+		var hasUsedEmotion = [], varyCount = 0;
+		var ecountEnergy = 0, evaryEnergy = 0, enumEnergy = 0;
+		ecountEnergy = emotionRecoed.length / 100.0 * 0.3333;
+		ecountEnergy = ecountEnergy > 0.3333 ? 0.3333 : ecountEnergy;
+
+		for (var i = 0 ; i < emotionRecoed.length ; i++) {
+			if (hasUsedEmotion.indexOf(emotionRecoed[i]) == -1) {
+				hasUsedEmotion.push(emotionRecoed[i])
+			}
+			if (i != 0 && emotionRecoed[i] != emotionRecoed[i - 1]) 
+				varyCount++;
+		}
+		enumEnergy = hasUsedEmotion.length / 7 * 0.3333;
+		enumEnergy = enumEnergy > 0.3333 ? 0.3333 : enumEnergy; 
+
+		evaryEnergy = varyCount / 10 * 0.3333;
+		evaryEnergy = evaryEnergy > 0.3333 ? 0.3333 : evaryEnergy; 
+
+		console.log(ecountEnergy, evaryEnergy, enumEnergy)
+
+		var result = ecountEnergy + evaryEnergy + enumEnergy;
+		return Math.floor(result*100000);
 	}
 
 	this.getCurrentRunTime = function() {
@@ -200,6 +241,14 @@ var Processor = function(canvasid) {
 		this.currentLipCornerDepressor +=  (this.targetLipCornerDepressor - this.currentLipCornerDepressor) * 0.2;
 		this.currentLipStretch +=  (this.targetLipStretch - this.currentLipStretch) * 0.2;
 		this.currentInnerBrowRaise +=  (this.targetInnerBrowRaise - this.currentInnerBrowRaise) * 0.2;
+		if (this.face != null && this.state == this.STATE.running)
+			this.drawRunning(this.face)
+		else if (this.state == this.STATE.outputing) 
+			this.drawOutputing()
+		else if (this.state == this.STATE.waiting)
+			this.drawWaiting()
+		else if (this.state == this.STATE.tip)
+			this.drawTakeListTip()
 	}
 
 	this.getCam = function() {
@@ -212,73 +261,112 @@ var Processor = function(canvasid) {
 			new fadeSound("bg", false, 0.5);
 			this.state = this.STATE.running;
 			// RESET
-			this.startTime = new Date();
+			this.startTime = + new Date();
 			this.emotionsRecord = "";
 			this.faceBase64Data = "";
 		}
 		if (this.state == this.STATE.running ) {
-			var face = faces[0];
-			this.draw(face);
-			if (face.appearance.age != "Unknown") {
+			this.face = faces[0];
+			if (this.face.appearance.age != "Unknown") {
 				var patt1 = /\d+/g;
-				var ages = face.appearance.age.match(patt1)
+				var ages = this.face.appearance.age.match(patt1)
 				if (ages.length == 1)
 					this.age = parseInt(ages[0])
 				else if (ages.length == 2)
 					this.age = (parseInt(ages[0]) + parseInt(ages[1])) / 2
 			}
-			if (face.appearance.gender != "Unknown") {
-				this.gender = face.appearance.gender == "Female" ? "woman" : "man"
+			if (this.face.appearance.gender != "Unknown") {
+				this.age = this.face.appearance.gender == "Female" ? "woman" : "man"
 			}
 		}
 	}
 
 	this.count  = 0;
 	this.hasShow = false;
-	this.draw = function(face) {
-		this.count++;
-		if (this.count % 10 == 0) {
-			console.log(face);
-			this.hasShow = true;
-		}
-		this.emotionsRecord += this.analyzeEmotion(face.emotions).maxIndex
-		if (this.faceBase64Data == "" && this.getCurrentRunTime() > this.maxTime/2) {
-			this.faceBase64Data = this.getFaceBase64();
-		}
+	this.drawRunning = function(face) {
+			this.count++;
+			if (this.count % 10 == 0) {
+				console.log(face);
+				this.hasShow = true;
+			}
+			this.emotionsRecord += this.analyzeEmotion(face.emotions).maxIndex
+			if (this.faceBase64Data == "" && this.getCurrentRunTime() > this.maxTime/2) {
+				this.faceBase64Data = this.getFaceBase64();
+			}
 
-		this.targetNoiseWrinke = face.expressions.noseWrinkle > 80 ? 100 : 0;
-		this.targetBrowRaise = face.expressions.browRaise > 80 ? 100 : 0;
-		this.targetEyeWiden = face.expressions.eyeWiden > 80 ? 100 : 0;
-		this.targetEyeClosure = face.expressions.eyeClosure > 80 ? 100 : 0;
-		this.targetBrowFurrow = face.expressions.browFurrow > 1 ? 100 : 0;
-		this.targetCheekRaise = face.expressions.cheekRaise > 80 ? 100 : 0;
-		this.targetLipCornerDepressor = face.expressions.lipCornerDepressor > 2 ? 100 : 0;
-		//this.currentLipCornerDepressor = Math.log(face.expressions.lipCornerDepressor+1)*40;
-		//this.currentLipCornerDepressor = this.currentLipCornerDepressor > 100 ? 100 : this.currentLipCornerDepressor;
-		this.targetLipStretch = face.expressions.lipStretch > 50 ? 100 : 0;
-		this.targetInnerBrowRaise = face.expressions.innerBrowRaise > 10 ? 100 : 0;
+			this.targetNoiseWrinke = face.expressions.noseWrinkle > 80 ? 100 : 0;
+			this.targetBrowRaise = face.expressions.browRaise > 80 ? 100 : 0;
+			this.targetEyeWiden = face.expressions.eyeWiden > 80 ? 100 : 0;
+			this.targetEyeClosure = face.expressions.eyeClosure > 80 ? 100 : 0;
+			this.targetBrowFurrow = face.expressions.browFurrow > 1 ? 100 : 0;
+			this.targetCheekRaise = face.expressions.cheekRaise > 80 ? 100 : 0;
+			this.targetLipCornerDepressor = face.expressions.lipCornerDepressor > 2 ? 100 : 0;
+			//this.currentLipCornerDepressor = Math.log(face.expressions.lipCornerDepressor+1)*40;
+			//this.currentLipCornerDepressor = this.currentLipCornerDepressor > 100 ? 100 : this.currentLipCornerDepressor;
+			this.targetLipStretch = face.expressions.lipStretch > 50 ? 100 : 0;
+			this.targetInnerBrowRaise = face.expressions.innerBrowRaise > 10 ? 100 : 0;
 
-		this.updateFaceRect(face.featurePoints)
-		var orient = face['measurements']['orientation'];
-		this.targetCam = [orient.pitch, orient.roll, orient.yaw, this.faceRect[0] +  this.faceRect[2] / 2,   this.faceRect[1] +  this.faceRect[3] / 2,   this.faceRect[2]];
+			this.updateFaceRect(face.featurePoints)
+			var orient = face['measurements']['orientation'];
+			this.targetCam = [orient.pitch, orient.roll, orient.yaw, this.faceRect[0] +  this.faceRect[2] / 2,   this.faceRect[1] +  this.faceRect[3] / 2,   this.faceRect[2]];
 
-		this.context.clearRect(0, 0, 1920, 1080);
-		this.drawFaceRect();
-		this.drawKeyPoints(face.featurePoints);
-		this.drawEmotion(face.emojis.dominantEmoji);
+			this.context.clearRect(0, 0, 1920, 1080);
+			/*this.drawFaceRect();
+			this.drawKeyPoints(face.featurePoints);
+			this.drawEmotion(face.emojis.dominantEmoji);*/
 
-		this.context.save();
+			this.context.save();
 
-		this.context.translate(960, 540);
-		this.context.rotate(-this.currentCam[1]*Math.PI/180/5);
-		this.context.translate(-960, -540);
+			this.context.translate(960, 540);
+			this.context.rotate(-this.currentCam[1]*Math.PI/180/5);
+			this.context.translate(-960, -540);
+			this.context.translate(0, -80);
 
-		this.drawEyes(face.featurePoints);
-		this.drawBrow(face.featurePoints);
-		this.drawNose(face.featurePoints);
-		this.drawMouse();
+			this.drawEyes(face.featurePoints);
+			this.drawBrow(face.featurePoints);
+			this.drawNose(face.featurePoints);
+			this.drawMouse();
 
-		this.context.restore();
+			this.context.restore();
+
+			// draw progress
+			this.context.beginPath();
+			this.context.fillStyle="#0b4179";
+			this.context.arc(700, 950, 50 , 0, 2*Math.PI); 
+			this.context.fill();
+			this.context.fillRect(700, 920, 520 + 10, 60);
+
+			this.context.beginPath();
+			this.context.fillStyle="#3ebcce";
+			this.context.arc(700, 950, 35 , 0, 2*Math.PI); 
+			this.context.fill();
+
+			for (var i = 0 ; i < 20 * this.getCurrentRunTime() / this.maxTime ; i++) {
+				this.context.fillRect(700 + 26 * i, 930, 20, 40);
+			}
+
+			// draw progress text
+			this.context.fillStyle = "#3ebcce";
+			this.context.font = "bold 40px tglb";
+			var text = Math.round(this.getCurrentRunTime() / this.maxTime * 100);
+			this.context.fillText("" + text + "%", 1250, 970);
+		
+	}
+	this.drawWaiting = function(){
+		this.context.fillStyle = "#195baa";
+		this.context.fillRect(0, 0, 1920, 1080);
+		this.context.drawImage(this.waitingImg, 592, 177)
+		
+	}
+	this.drawOutputing = function(){
+		this.context.fillStyle = "#195baa";
+		this.context.fillRect(0, 0, 1920, 1080);
+		this.context.drawImage(this.outputingImg, 486, 177)
+	}
+	this.drawTakeListTip = function(){
+		this.context.fillStyle = "#195baa";
+		this.context.fillRect(0, 0, 1920, 1080);
+		this.context.drawImage(this.takeListImg, 486, 177)
 	}
 	this.analyzeEmotion = function (emotions) {
 		var maxVal = 0;

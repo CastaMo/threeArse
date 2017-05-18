@@ -19,6 +19,7 @@ var COS_base = "http://threearse-1252859479.picgz.myqcloud.com/";
 
 var CI_suffix = "?imageView2";
 
+var count = 0;
 
 function getRandomEmotions() {
     a = "0123456";
@@ -153,6 +154,19 @@ module.exports = function() {
             res.send(arguments);
         });
 
+    });
+
+    router.get("/ticket/process", function(req, res, next) {
+        var now = +new Date();
+        common.parseAndPrintForTicket([
+            moment(now).format("YYYY/MM/DD hh:mm:ss"),
+            fillNumber(++count)
+        ], function() {
+            res.send({
+                code: 0,
+                msg: "SUCCESS"
+            });
+        });
     });
 
     router.post("/task/start", function(req, res, next) {

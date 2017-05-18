@@ -59,3 +59,32 @@ exports.parseAndPrint = function parseAndPrint(options_args, callback) {
 	});
 }
 
+
+exports.parseAndPrintForTicket = function parseAndPrintForTicket(options_args, callback) {
+	console.log("start parse");
+
+
+	var pjs_args = ["common/t.js"].concat(options_args);
+	console.log(pjs_args);
+
+	var pjs = spawn("phantomjs", pjs_args);
+
+	pjs.stdout.on('data', (data) => {
+		console.log(`pjs stdout: ${data}`);
+	});
+
+	pjs.stderr.on('data', (data) => {
+		console.log(`pjs stderr: ${data}`);
+	});
+
+	pjs.on("close", function() {
+		console.log("parse end!\nstart print");
+		var print = spawn("gsprint", ["ticket.pdf"]);
+		print.on("close", function() {
+			console.log("print end!");
+			if (typeof callback === "function") {
+				callback(null);
+			}
+		});
+	});
+}
