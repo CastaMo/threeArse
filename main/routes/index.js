@@ -141,6 +141,10 @@ module.exports = function() {
 	});
 
     router.post("/task/start", function(req, res, next) {
+
+    	console.log("task start");
+    	console.log(req.body);
+
         var body = req.body,
             img1_base64 = body.meurl,
             img2_base64 = body.picurl,
@@ -213,7 +217,7 @@ module.exports = function() {
 
 
         	request({
-        		url: "http://192.168.0.168/?button1on",
+        		url: "http://169.254.0.178/?button1on",
         		method: "GET"
         	}, function(err, httpResponse, body) {
         		console.log(err, body);
@@ -230,14 +234,14 @@ module.exports = function() {
         	Key1 = "default_avatar/default.png";
         	ep.done("upload_1")(null);
         } else {
-        	return uploadFileForBase64(img1_base64, Key1, ep.done("upload_1"));
+        	uploadFileForBase64(img1_base64, Key1, ep.done("upload_1"));
         }
 
         if (img2_base64.length === 0) {
         	Key2 = "default_avatar/default.png";
         	ep.done("upload_2")(null);
         } else {
-        	return uploadFileForBase64(img2_base64, Key2, ep.done("upload_2"));
+        	uploadFileForBase64(img2_base64, Key2, ep.done("upload_2"));
         }
 
     });
