@@ -207,6 +207,15 @@ module.exports = function() {
                 energy / 100000,
                 "NO. " + fillNumber(number)
             ]);
+
+
+        	request({
+        		url: "http://192.168.0.168/?button1on",
+        		method: "GET"
+        	}, function(err, httpResponse, body) {
+        		console.log(err, body);
+        	});
+
             res.send({
                 code: 0,
                 data: {},
