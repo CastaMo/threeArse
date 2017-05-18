@@ -6,11 +6,82 @@ var camera, scene, renderer, particles, geometry, materials = [], parameters, i,
 var mouseX = 0, mouseY = 0;
 var windowHalfX = window.innerWidth / 2;
 var windowHalfY = window.innerHeight / 2;
+
+
+// WEBGL
+//if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+var MARGIN = 0;
+
+var SCREEN_WIDTH = window.innerWidth;
+var SCREEN_HEIGHT = window.innerHeight - 2 * MARGIN;
+
+var container;
+
+var camera, scene, renderer;
+
+var mesh, texture, geometry, materials, material, current_material;
+
+var light, pointLight, ambientLight;
+
+var effect, resolution, numBlobs;
+
+
+var effectController = {
+
+	material: "colors",
+
+	speed: 1.0,
+	numBlobs: 10,
+	resolution: 50,
+	isolation: 30,
+
+	floor: true,
+	wallx: false,
+	wallz: false,
+
+	hue: 0.0,
+	saturation: 0.8,
+	lightness: 1,
+
+	lhue: 0.04,
+	lsaturation: 1.0,
+	llightness: 0.5,
+
+	lx: 0.5,
+	ly: 0.5,
+	lz: 1.0,
+
+	postprocessing: false,
+
+	dummy: function() {
+	}
+
+};
+
+var time = 0;
+var clock = new THREE.Clock();
+
 var Processor = function(canvasid) {
 	this.canvas = document.getElementById("mycanvas");
 	this.context = this.canvas.getContext('2d');
 	this.currentCam = [0, 0, 0, 0, 0, 0];
 	this.targetCam = [0, 0, 0, 0, 0, 0];
+
+	this.STATE = {
+		"waiting": 0,
+		"running": 1,
+		"outputing": 2
+	};
+	this.state = this.STATE.waiting;
+	this.startTime = 0;
+	this.maxTime = 10000;
+	this.emotionsRecord = "";
+	this.faceBase64Data = "";
+	this.emotionBase64Data = "";
+	this.age = 19;
+	this.gender = "unknown";
+	this.energy = 52356;
 
 	this.currentNoiseWrinke = 0;
 	this.targetNoiseWrinke = 0;
@@ -34,7 +105,89 @@ var Processor = function(canvasid) {
 	this.faceRect = [0, 0, 0, 0];
 	this.noseImg = new Image();
 	this.noseImg.src="./img/nose.png"
+
+	this.init = function() {
+		//this.faceImageCanvas = document.getElementById("face_video_canvas");
+	    //this.offlineCanvas = document.createElement('canvas');
+	    this.faceImageCanvas = document.getElementById('test');
+	    this.faceImageCanvas.width = 400;
+	    this.faceImageCanvas.height = 400;
+	    this.faceImageCtx = this.faceImageCanvas.getContext("2d");
+	    // Emtoion Canvas
+	    this.emotionImgCanvas = document.getElementById('emotionCanvas');
+	    this.emotionImgCanvas.width = 600;
+	    this.emotionImgCanvas.height = 600;
+	    this.emotionImgCtx = this.emotionImgCanvas.getContext("2d");
+	}
+
+	this.getFaceBase64 = function()  {
+		this.faceCanvas = document.getElementById("face_video_canvas");
+		this.faceImageCtx.drawImage(this.faceCanvas, this.faceRect[0], this.faceRect[1], this.faceRect[2], this.faceRect[3], 0, 0, 400, 400);
+		return this.faceImageCanvas.toDataURL('image/jpeg',0.7);
+	}
+
+	this.getEmotionBase64 = function()  {
+		var emotions = [0, 0, 0, 0, 0, 0, 0];
+		for (var i = 0 ; i < this.emotionsRecord.length ; i++) {
+			emotions[parseInt(this.emotionsRecord[i])] = emotions[parseInt(this.emotionsRecord[i])] + 1;
+		}
+		for (var i = 0 ; i < emotions.length ; i++) {
+			emotions[i] = emotions[i] / this.emotionsRecord.length;
+		}
+		console.log(emotions);
+		render(emotions);
+		return renderer.domElement.toDataURL('image/jpeg');
+	}
+
+	this.outputResult = function() {
+		this.emotionBase64Data = this.getEmotionBase64();
+
+		var postData = { 
+			"time": this.startTime,
+			"energy": this.energy,
+			"gender": this.gender,
+			"age": this.age,
+			"emotions": this.emotionsRecord,
+			"picurl": this.emotionBase64Data,
+			"meurl":  this.faceBase64Data
+		}
+
+		console.log(postData)
+
+        $.ajax({
+		  method: "POST",
+		  url: "http://localhost:3000/task/start",
+		  data: postData
+		}).done(function( msg ) {
+			if (msg.code == 0) {
+				alert("OKOKOKOK 得到了本地服务器的成功返回")
+				processor.state = processor.STATE.waiting;
+			} else {
+				alert("得不到成功返回呀")
+				processor.state = processor.STATE.waiting;
+			}
+		});
+
+	}
+
+	this.getCurrentRunTime = function() {
+		if (this.state == this.STATE.running) {
+			var t = (+ new Date()) - this.startTime;
+			return t;
+		}
+		return -1;
+	}
+
 	this.update = function() {
+		// 判断 是否到达时间限制，是则停止
+		if (this.state == this.STATE.running) {
+			if (this.getCurrentRunTime() >= this.maxTime) {
+				new fadeSound("bg", true, 0.5);
+				console.log("STOP");
+				this.state = this.STATE.outputing;
+				this.outputResult();
+			}
+		}
 		for (var i = 0 ; i < this.currentCam.length ; i++) {
 			this.currentCam[i] +=  (this.targetCam[i] - this.currentCam[i]) * 0.1;
 		}
@@ -48,19 +201,50 @@ var Processor = function(canvasid) {
 		this.currentLipStretch +=  (this.targetLipStretch - this.currentLipStretch) * 0.2;
 		this.currentInnerBrowRaise +=  (this.targetInnerBrowRaise - this.currentInnerBrowRaise) * 0.2;
 	}
+
 	this.getCam = function() {
 		return this.currentCam;
 	}
+
+	this.newFace = function(faces) {
+		if (this.state == this.STATE.waiting) {
+			console.log("RUN");
+			new fadeSound("bg", false, 0.5);
+			this.state = this.STATE.running;
+			// RESET
+			this.startTime = + new Date();
+			this.emotionsRecord = "";
+			this.faceBase64Data = "";
+		}
+		if (this.state == this.STATE.running ) {
+			var face = faces[0];
+			this.draw(face);
+			if (face.appearance.age != "Unknown") {
+				var patt1 = /\d+/g;
+				var ages = face.appearance.age.match(patt1)
+				if (ages.length == 1)
+					this.age = parseInt(ages[0])
+				else if (ages.length == 2)
+					this.age = (parseInt(ages[0]) + parseInt(ages[1])) / 2
+			}
+			if (face.appearance.gender != "Unknown") {
+				this.age = face.appearance.gender == "Female" ? "woman" : "man"
+			}
+		}
+	}
+
+	this.count  = 0;
 	this.hasShow = false;
-	this.draw = function(faces) {
-		var face = faces[0];
-		if (!this.hasShow) {
+	this.draw = function(face) {
+		this.count++;
+		if (this.count % 10 == 0) {
 			console.log(face);
 			this.hasShow = true;
 		}
-		//console.log(face.expressions.innerBrowRaise)
-		//console.log(this.getEmotion(face.emotions));
-		//console.log(face.emotions);
+		this.emotionsRecord += this.analyzeEmotion(face.emotions).maxIndex
+		if (this.faceBase64Data == "" && this.getCurrentRunTime() > this.maxTime/2) {
+			this.faceBase64Data = this.getFaceBase64();
+		}
 
 		this.targetNoiseWrinke = face.expressions.noseWrinkle > 80 ? 100 : 0;
 		this.targetBrowRaise = face.expressions.browRaise > 80 ? 100 : 0;
@@ -79,6 +263,7 @@ var Processor = function(canvasid) {
 		this.targetCam = [orient.pitch, orient.roll, orient.yaw, this.faceRect[0] +  this.faceRect[2] / 2,   this.faceRect[1] +  this.faceRect[3] / 2,   this.faceRect[2]];
 
 		this.context.clearRect(0, 0, 1920, 1080);
+		this.drawFaceRect();
 		this.drawKeyPoints(face.featurePoints);
 		this.drawEmotion(face.emojis.dominantEmoji);
 
@@ -94,7 +279,28 @@ var Processor = function(canvasid) {
 		this.drawMouse();
 
 		this.context.restore();
-
+	}
+	this.analyzeEmotion = function (emotions) {
+		var maxVal = 0;
+		var sum = 0;
+		var result = {
+			maxIndex: 0,
+			emotionRate: [0, 0, 0, 0, 0, 0, 0]
+		};
+		var careKey = ['joy', 'sadness', 'disgust', 'anger', 'netural', 'surprise', 'fear']
+		for (var key in emotions) {
+			sum += emotions[key];
+			if (emotions[key] > maxVal && careKey.indexOf(key) != -1) {
+				result.maxIndex = careKey.indexOf(key);
+				maxVal = emotions[key];
+			}
+		}
+		var i = 0;
+		for (var key in emotions) {
+			result.emotionRate[i] = emotions[key] / sum;
+			i++;
+		}
+		return result;
 	}
 	this.drawEyes = function(keyPoints) {
 		leftX = (keyPoints["16"].x + keyPoints["17"].x + keyPoints["30"].x + keyPoints["31"].x) / 4;
@@ -193,10 +399,15 @@ var Processor = function(canvasid) {
 			maxX = pos.x > maxX ? pos.x : maxX;
 			maxY = pos.y > maxY ? pos.y : maxY;
 		}
-		this.faceRect = [minX, minY, maxX - minX, maxY - minY];
+		var w = maxX - minX;
+		var h = maxY - minY;
+		var size = w > h ? w : h;
+		this.faceRect = [minX-w/2, minY-h/2, w*2, h*2];
 	}
 	this.drawFaceRect = function(keyPoints) {
-		
+		this.context.strokeStyle="#ff00ff";
+		this.context.lineWidth=20;
+		this.context.strokeRect(this.faceRect[0], this.faceRect[1], this.faceRect[2], this.faceRect[3]);
 	}
 	this.drawKeyPoints = function(keyPoints) {
 		var i = 0;
@@ -213,7 +424,7 @@ var Processor = function(canvasid) {
 		this.context.font="100px Georgia";
 		this.context.fillText(emotion,1800, 200);
 	}
-	this.getEmotion = function(emotions) {
+	/*this.getEmotion = function(emotions) {
 		maxVal = 0;
 		maxKey = "";
 		for (k in emotions) {
@@ -223,8 +434,36 @@ var Processor = function(canvasid) {
 			maxVal = emotions[k] > maxVal ? emotions[k] : maxVal;
 		}
 		return maxKey;
-	}
+	}*/
+	this.init();
 }
+
+function initMyAudio() {
+    ion.sound({
+	    sounds: [
+	        {
+	            name: "bg",
+	    		loop: true
+	        }, 
+	        {
+	            name: "click"
+	        }, 
+	        {
+	            name: "intro"
+	        }, 
+	        {
+	            name: "outro"
+	        }, 
+	    ],
+	    //volume: 0.5,
+	    path: "audio/",
+	    preload: true,
+	    multiplay: true
+	});
+	console.log("initMyAudio");
+	ion.sound.play("bg");
+}
+
 function initStats() {
 	stats = new Stats();
 	stats.domElement.style.position = 'absolute';
@@ -255,9 +494,8 @@ function initDetector() {
 
 	});
 	detector.addEventListener("onImageResultsSuccess", function (faces, image, timestamp) {
-		//console.log(faces);
 		if (faces.length != 0) {
-			processor.draw(faces);
+			processor.newFace(faces);
 		}
 	});
 
@@ -284,9 +522,9 @@ function initDetector() {
 	detector.addEventListener("onWebcamConnectFailure", function() {
 		console.log("I've failed to connect to the camera :(");
 	});
-	detector.detectExpressions.smile = true;
+	detector.detectExpressions.smile = false;
 	// Track joy emotion
-	detector.detectEmotions.joy = true;
+	detector.detectEmotions.joy = false;
 
 	// Detect person's gender
 	detector.detectAppearance.gender = true;
@@ -296,95 +534,288 @@ function initDetector() {
 	detector.detectAllEmojis();
 	detector.detectAllAppearance();
 }
-function startVideo() {
-	if (isStart) {
-		detector.stop();
-		var isStart = false;
-		document.getElementById("mybutton").value = "start";
-	}
-	else {
-		detector.start();
-		var isStart = true;
-		document.getElementById("mybutton").value = "stop";
-	}
+function fadeSound(name, isOut, time) {
+	this.count = 10;
+	this.step = 10 / (time / 0.05);
+	this.isOut = isOut;
+	this.soundName = name;
+	this.fadeOut = function() {
+		//console.log(this.count);
+		if (this.count <= 0) {
+			window.clearInterval(this.handler);
+			console.log("clear");
+		}
+		if (this.isOut)
+			ion.sound.volume(this.soundName, {volume: this.count / 10});
+		else
+			ion.sound.volume(this.soundName, {volume: 1 - this.count / 10});
+		this.count -= this.step;
+	};
+	this.handler = setInterval(this.fadeOut.bind(this), 50);
 }
 
-function initWEBGL()  {
-	container = document.createElement( 'div' );
-	document.body.appendChild( container );
-	camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 3000 );
-	camera.position.z = 1000;
+function initWebGL() {
+
+	container = document.getElementById( 'container' );
+
+	// CAMERA
+
+	camera = new THREE.PerspectiveCamera( 45, SCREEN_WIDTH / SCREEN_HEIGHT, 1, 10000 );
+	camera.position.set( 3000, 0, 0 );
+
+	// SCENE
+
 	scene = new THREE.Scene();
-	scene.fog = new THREE.FogExp2( 0x000000, 0.0007 );
-	geometry = new THREE.Geometry();
-	for ( i = 0; i < 20000; i ++ ) {
-		var vertex = new THREE.Vector3();
-		vertex.x = Math.random() * 2000 - 1000;
-		vertex.y = Math.random() * 2000 - 1000;
-		vertex.z = Math.random() * 2000 - 1000;
-		geometry.vertices.push( vertex );
-	}
-	parameters = [
-		[ [1, 1, 0.5], 5 ],
-		[ [0.95, 1, 0.5], 4 ],
-		[ [0.90, 1, 0.5], 3 ],
-		[ [0.85, 1, 0.5], 2 ],
-		[ [0.80, 1, 0.5], 1 ]
-	];
-	for ( i = 0; i < parameters.length; i ++ ) {
-		color = parameters[i][0];
-		size  = parameters[i][1];
-		materials[i] = new THREE.PointsMaterial( { size: size } );
-		particles = new THREE.Points( geometry, materials[i] );
-		particles.rotation.x = Math.random() * 6;
-		particles.rotation.y = Math.random() * 6;
-		particles.rotation.z = Math.random() * 6;
-		scene.add( particles );
-	}
-	renderer = new THREE.WebGLRenderer();
+
+	// LIGHTS
+
+	light = new THREE.DirectionalLight( 0x202020 );
+	light.position.set( 0.5, 0.5, 1 );
+	light2 = new THREE.DirectionalLight( 0x202020 );
+	light2.position.set( 0, 0, -1 );
+	light3 = new THREE.DirectionalLight( 0x202020 );
+	light3.position.set( 1, 0.5, 0.5 );
+	scene.add( light );
+	scene.add( light2 );
+	scene.add( light3 );
+
+	/*pointLight = new THREE.PointLight( 0xff3300 );
+	pointLight.position.set( 0, 0, 100 );
+	scene.add( pointLight );*/
+
+	ambientLight = new THREE.AmbientLight( 0xaaaaaa , 1);
+	scene.add( ambientLight );
+
+	// MATERIALS
+
+	materials = generateMaterials();
+	current_material = "colors";
+
+	// MARCHING CUBES
+
+	resolution = 50;
+	numBlobs = 7;
+
+	effect = new THREE.MarchingCubes( resolution, materials[ current_material ].m, true, true );
+	effect.position.set( 0, 0, 0 );
+	effect.scale.set( 700, 700, 700 );
+
+	effect.enableUvs = false;
+	effect.enableColors = true;
+
+	scene.add( effect );
+
+
+	// RENDERER
+
+	renderer = new THREE.WebGLRenderer({ 
+		antialias: true,
+		preserveDrawingBuffer: true 
+	});
+	renderer.setClearColor( 0x000000 );
 	renderer.setPixelRatio( window.devicePixelRatio );
-	renderer.setSize( window.innerWidth, window.innerHeight );
+	renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+
+	renderer.domElement.style.position = "absolute";
+	renderer.domElement.style.top = MARGIN + "px";
+	renderer.domElement.style.left = "0px";
+
 	container.appendChild( renderer.domElement );
+
+	//
+
+	renderer.gammaInput = true;
+	renderer.gammaOutput = true;
+
+	// CONTROLS
+
+	controls = new THREE.OrbitControls( camera, renderer.domElement );
+
+
+	// EVENTS
+
+	window.addEventListener( 'resize', onWindowResize, false );
+
+}
+function onWindowResize( event ) {
+
+	SCREEN_WIDTH = window.innerWidth;
+	SCREEN_HEIGHT = window.innerHeight - 2 * MARGIN;
+
+	camera.aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+	camera.updateProjectionMatrix();
+
+	renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+	//composer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+
+
+}
+
+function generateMaterials() {
+
+	var materials = {
+
+		"colors" :
+		{
+			m: new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0xffffff, shininess: 1, vertexColors: THREE.VertexColors } ),
+			h: 0, s: 0, l: 1
+		},
+
+	};
+
+	return materials;
+
+}
+function updateCubes( object, time, numblobs, floor, wallx, wallz, emotions ) {
+
+	/*var emotions = [1, 2.86, 2.5, 1.4, 2.55, 3, 36.8];
+
+	
+	for (var i = 0 ; i < emotions.length ; i++) {
+		sum += emotions[i]
+	}*/
+	var maxValue = 0, maxIndex = 0;
+	for (var i = 0 ; i < emotions.length ; i++) {
+
+		if (emotions[i] > maxValue) {
+			maxValue = emotions[i];
+			maxIndex  = i;
+		}
+		if (i == 0) {
+			emotions[i] = emotions[i];
+		}
+		else {
+			emotions[i] = emotions[i] + emotions[i-1];
+		}
+
+	}
+	//console.log("maxIndex", maxIndex);
+	var emotionPos = [
+		[0.45, 0.55, 0.35], // 开心
+		[0.25, 0.35, 0.35], // 伤
+		[0.25, 0.55, 0.55], // 厌恶
+		[0.45, 0.35, 0.35], // 生气
+		[0.45, 0.55, 0.55], // 平
+		[0.45, 0.3, 0.55], // 惊
+		[0.25, 0.4, 0.55], // 恐
+		[0.25, 0.3, 0.55], // 轻蔑
+	]
+	var cameraPos = [
+		[2000, 500, 0], // 开心
+		[0, 1500, 1500], // 伤
+		[0, 2000, 1500], // 厌恶
+		[2000, -500, -1000], // 生气
+		[1200, 1200, 1200], // 平
+		[1600, 0, 1600], // 惊
+		[0, 500, 2000], // 恐
+		[0, 800, 2000], // 轻蔑
+	]
+	camera.position.set( cameraPos[maxIndex][0],cameraPos[maxIndex][1],cameraPos[maxIndex][2]);
+
+
+	var randomRange = 0.15;
+
+	object.reset();
+
+	// fill the field with some metaballs
+
+	var i, ballx, bally, ballz, subtract, strength;
+	subtract = 12;
+	strength = 1.2 / ( ( Math.sqrt( numblobs ) - 1 ) / 4 + 1 );
+
+	var lookatX = 0,lookatY = 0,lookatZ = 0;
+	for ( i = 0; i < /*numblobs*/20; i ++ ) {
+		var rand = Math.random()
+		subtract = (Math.floor(rand*24)) ;
+		strength = subtract/10.0 / ( ( Math.sqrt( numblobs ) - 1 ) / 4 + 1 );
+
+		for (var j = 0 ; j <= emotions.length ; j++) {
+			if (emotions[j] > rand) {
+				//console.log(j)
+				ballx = emotionPos[j][0] + (Math.random()-0.5)*randomRange*2;
+				bally = emotionPos[j][1] + (Math.random()-0.5)*randomRange*2;
+				ballz = emotionPos[j][2] + (Math.random()-0.5)*randomRange*2;
+				lookatX += ballx;
+				lookatY += bally;
+				lookatZ += ballz;
+				break;
+			}
+		}
+
+		camera.lookAt(new THREE.Vector3(lookatX/emotions.length, lookatY/emotions.length, lookatZ/emotions.length));
+		//var time = 99.2;
+		/*ballx = Math.sin( i + 1.26 * time * ( 1.03 + 0.5 * Math.cos( 0.21 * i ) ) ) * 0.1+ 0.5;
+		bally = Math.abs( Math.cos( i + 1.12 * time * Math.cos( 1.22 + 0.1424 * i ) ) ) * 0.5+0.2; // dip into the floor
+		ballz = Math.cos( i + 1.32 * time * 0.1 * Math.sin( ( 0.92 + 0.53 * i ) ) ) * 0.27 + 0.5;
+		ballx = 0.6;
+		bally = 0.2;
+		ballz = 0.2;*/
+
+		object.addBall(ballx, bally, ballz, strength, subtract);
+
+	}
+
+}
+
+function render(emotions) {
+
+	var delta = clock.getDelta();
+
+	time += delta * effectController.speed * 0.5;
+
+	controls.update( delta );
+
+	// marching cubes
+
+	if ( effectController.resolution !== resolution ) {
+
+		resolution = effectController.resolution;
+		effect.init( Math.floor( resolution ) );
+
+	}
+
+	if ( effectController.isolation !== effect.isolation ) {
+
+		effect.isolation = effectController.isolation;
+
+	}
+
+	updateCubes( effect, time, effectController.numBlobs, effectController.floor, effectController.wallx, effectController.wallz, emotions );
+
+	effect.material.color.setHSL( effectController.hue, effectController.saturation, effectController.lightness );
+
+	light.position.set( effectController.lx, effectController.ly, effectController.lz );
+	light.position.normalize();
+
+	renderer.clear();
+	renderer.clear();
+	renderer.render( scene, camera );
+
 }
 function animate() {
 	requestAnimationFrame( animate );
 	processor.update();
-	render();
 	stats.update();
-}
-function render() {
-	var time = Date.now() * 0.00005;
-	cam = processor.getCam();
-	camera.rotation.x = cam[0] / 180 * Math.PI;
-	camera.rotation.y = -cam[2] / 180 * Math.PI;
-	camera.rotation.z = cam[1] / 180 * Math.PI;
-	camera.position.x = -cam[3]*2 + 640;
-	camera.position.y = -cam[4]*2 + 480;
-	camera.position.z = 700 - cam[5]*2;
-	//console.log(camera.position)
-	for ( i = 0; i < scene.children.length; i ++ ) {
-		var object = scene.children[ i ];
-		if ( object instanceof THREE.Points ) {
-			object.rotation.y = time * ( i < 4 ? i + 1 : - ( i + 1 ) );
-		}
-	}
-	/*
-	camera.position.x += ( mouseX - camera.position.x ) * 0.05;
-	camera.position.y += ( - mouseY - camera.position.y ) * 0.05;
-	camera.lookAt( scene.position );
-	for ( i = 0; i < materials.length; i ++ ) {
-		color = parameters[i][0];
-		h = ( 360 * ( color[0] + time ) % 360 ) / 360;
-		materials[i].color.setHSL( h, color[1], color[2] );
-	}*/
-	renderer.render( scene, camera );
 }
 function init() {
 	processor = new Processor();
+	initMyAudio();
+	initWebGL();
+	//render(1);
 	initDetector();
 	initStats();
-	initWEBGL();
 	detector.start();
+	//detector.stop();
+	$("body").click(function() {
+		console.log("click");
+		ion.sound.play("bg");
+	})
+	$(window).bind('beforeunload', function(){
+		if(detector != null){
+			detector.stop();
+			console.log("stop");
+		}
+	});
 }
 init();
 animate();

@@ -98,6 +98,12 @@ button {
 	width: 1920px;
 	height: 1080px;
     background-color: #005ec3;
+    z-index: 10;
+}
+.container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
 }
 video {
 	width: 640px;
