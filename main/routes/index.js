@@ -117,8 +117,8 @@ module.exports = function() {
             url: "http://localhost:3000/task/start",
             method: "POST",
             form: {
-                img1_base64: img1_base64,
-                img2_base64: img2_base64,
+                meurl: img1_base64,
+                picurl: img2_base64,
                 time: time,
                 gender: gender,
                 age: age,
@@ -142,8 +142,8 @@ module.exports = function() {
 
     router.post("/task/start", function(req, res, next) {
         var body = req.body,
-            img1_base64 = body.img1_base64,
-            img2_base64 = body.img2_base64,
+            img1_base64 = body.meurl,
+            img2_base64 = body.picurl,
             time = body.time,
             gender = body.gender,
             age = body.age,
@@ -158,7 +158,7 @@ module.exports = function() {
         } else if (gender === "woman") {
         	gender_str = "女 WOMAN";
         } else {
-        	gender_str = "未能识别";
+        	gender_str = "外星人";
         }
 
         var ep = new eventproxy();
@@ -175,9 +175,9 @@ module.exports = function() {
 
             var uploadForm = {
             	time: moment(time).format("YYYYMMDD hh:mm:ss"),
-        		energy: energy,
+        		energy: Number(energy),
         		gender: gender,
-        		age: age,
+        		age: Number(age),
         		emotions: emotions,
         		picurl: Key2,
         		meurl: Key1
@@ -192,12 +192,15 @@ module.exports = function() {
         });
 
         ep.on("upload_server", function(httpResponse, body) {
+        	if (typeof body === "string") {
+        		console.log(body);
+        		body = JSON.parse(body);
+        	}
         	var id = body.uniqueId,
         		number = body.number;
 
         	var me = encodeURIComponent(`${COS_base}${Key1}${CI_suffix}`),
                 h5 = "http://localhost:8888/qrcode/get?dest=" + encodeURIComponent(`http://iamsen.com/h5/threeArse/tester?id=${id}`);
-
         	common.parseAndPrint([
                 h5,
                 me,

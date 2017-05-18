@@ -212,7 +212,7 @@ var Processor = function(canvasid) {
 			new fadeSound("bg", false, 0.5);
 			this.state = this.STATE.running;
 			// RESET
-			this.startTime = + new Date();
+			this.startTime = new Date();
 			this.emotionsRecord = "";
 			this.faceBase64Data = "";
 		}
@@ -228,7 +228,7 @@ var Processor = function(canvasid) {
 					this.age = (parseInt(ages[0]) + parseInt(ages[1])) / 2
 			}
 			if (face.appearance.gender != "Unknown") {
-				this.age = face.appearance.gender == "Female" ? "woman" : "man"
+				this.gender = face.appearance.gender == "Female" ? "woman" : "man"
 			}
 		}
 	}
