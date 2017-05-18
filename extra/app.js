@@ -65,6 +65,7 @@ app.use(require('connect-history-api-fallback')());
 app.use(express.static('dist'));
 
 app.use(express.static('template'));
+app.use(express.static('ticket'));
 
 app.use(function(err, req, res, next) {
     res.status(err.status || 500);

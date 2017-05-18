@@ -108,6 +108,7 @@ module.exports = function() {
         res.render("template/demo");
     });
 
+
     router.get("/test", function(req, res, next) {
         // query.me = query.me || "http://threearse-1252859479.picgz.myqcloud.com/test/2.jpeg?imageView2";
         // query.h5 = query.h5 || "http://localhost:8888/qrcode/get?dest=http://www.baidu.com";
@@ -205,9 +206,9 @@ module.exports = function() {
 
         ep.on("transfer_avatar", function() {
             console.log("finish transfer_avatar");
-            fs.stat(temp_avatar_path, function(err, stats) {
+            fs.stat(output_avatar_path, function(err, stats) {
                 var ContentLength = stats.size,
-                    stream = fs.createReadStream(temp_avatar_path);
+                    stream = fs.createReadStream(output_avatar_path);
                 uploadFile(stream, ContentLength, Key1, ep.done("upload_avatar"));
             });
         });
@@ -223,9 +224,10 @@ module.exports = function() {
 
         ep.on("transfer_emotion", function() {
             console.log("finish transfer_emotion");
-            fs.stat(temp_emotion_path, function(err, stats) {
+            fs.stat(output_emotion_path, function(err, stats) {
                 var ContentLength = stats.size,
-                    stream = fs.createReadStream(temp_emotion_path);
+                    stream = fs.createReadStream(output_emotion_path);
+
                 uploadFile(stream, ContentLength, Key2, ep.done("upload_emotion"));
             });
         });

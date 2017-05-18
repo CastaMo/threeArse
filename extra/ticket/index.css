@@ -1,0 +1,27 @@
+@font-face {
+	font-family: 'fzch';
+	src: url("./方正粗黑繁体.ttf");
+}
+
+* {
+	margin: 0;
+	padding: 0;
+}
+
+body {
+	width: 400px;
+}
+
+.wrapper {
+	width: 300px;
+	height: 621px;
+	background-image: url(/80.png);
+	background-repeat: no-repeat;;
+	background-size: cover;
+}
+#datetime {
+	font-family: 'fzch';
+	font-weight: bold;
+	position: absolute;
+	top: 2;
+}

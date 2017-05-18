@@ -24,6 +24,14 @@ module.exports = function() {
 		});
 	});
 
+	router.get("/ticket/get", function(req, res, next) {
+		var query = req.query;
+		console.log(query);
+		res.render("ticket/index", {
+			data: query
+		});
+	});
+
 
 	router.get("/qrcode/get", function(req, res, next) {
 		var dest = req.query.dest;
