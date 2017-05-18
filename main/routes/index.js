@@ -226,8 +226,19 @@ module.exports = function() {
             });
         });
 
-        uploadFileForBase64(img1_base64, Key1, ep.done("upload_1"));
-        uploadFileForBase64(img2_base64, Key2, ep.done("upload_2"));
+        if (img1_base64.length === 0) {
+        	Key1 = "default_avatar/default.png";
+        	ep.done("upload_1")(null);
+        } else {
+        	return uploadFileForBase64(img1_base64, Key1, ep.done("upload_1"));
+        }
+
+        if (img2_base64.length === 0) {
+        	Key2 = "default_avatar/default.png";
+        	ep.done("upload_2")(null);
+        } else {
+        	return uploadFileForBase64(img2_base64, Key2, ep.done("upload_2"));
+        }
 
     });
 
