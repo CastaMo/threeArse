@@ -1,5 +1,3 @@
-import cv2
-import numpy
 from PIL import Image
 from PIL import ImageFont, ImageDraw
 from time import gmtime, strftime

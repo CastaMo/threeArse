@@ -211,11 +211,17 @@ module.exports = function() {
 
         ep.on("write_avatar", function() {
             console.log("finish write_avatar");
-            common.transferEmotion([
-                temp_avatar_path,
-                output_avatar_path,
-                moment(time).format("hh:mm:ss")
-            ], ep.done("transfer_avatar"));
+            var read_stream = fs.createReadStream(temp_avatar_path),
+                write_stream = fs.createWriteStream(output_avatar_path);
+
+            read_stream.pipe(write_stream);
+            read_stream.on("end", function() {
+                ep.done("transfer_avatar")(null);
+            });
+            // common.transferAvatar([
+            //     temp_avatar_path,
+            //     output_avatar_path
+            // ], ep.done("transfer_avatar"));
         });
 
         ep.on("transfer_avatar", function() {

@@ -29,6 +29,31 @@ exports.transferEmotion = function transferEmotion(options_args, callback) {
 	});
 };
 
+exports.transferAvatar = function transferAvatar(options_args, callback) {
+
+
+	var script_path = path.join(__dirname, "../processEmotionImg/processAvatarPic.py");
+
+	var pap_args = [script_path].concat(options_args);
+
+	console.log("pap_args: ", pap_args);
+	var pap = spawn("python", pap_args);
+
+	pap.stdout.on('data', (data) => {
+		console.log(`pap stdout: ${data}`);
+	});
+
+	pap.stderr.on('data', (data) => {
+		console.log(`pap stderr: ${data}`);
+	});
+	
+	pap.on("close", function() {
+		if (typeof callback === "function") {
+			callback(null);
+		}
+	});
+};
+
 exports.parseAndPrint = function parseAndPrint(options_args, callback) {
 	console.log("start parse");
 

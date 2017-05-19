@@ -32,7 +32,14 @@ app.use(route);
 app.use(express.static('headPosTrackDemo'));
 
 
-
+app.use(function(err, req, res, next) {
+	console.log(err);
+    res.status(err.status || 500);
+    res.send({
+        msg: err.message,
+        error: {}
+    });
+});
 
 
 app.listen(port, function(err) {

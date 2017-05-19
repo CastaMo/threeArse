@@ -160,7 +160,7 @@ var Processor = function(canvasid) {
 			"time": this.startTime,
 			"energy": this.getEnergy(this.emotionsRecord),
 			"gender": this.gender,
-			"age": this.age,
+			"age": Math.floor(this.age),
 			"emotions": this.emotionsRecord,
 			"picurl": this.emotionBase64Data,
 			"meurl":  this.faceBase64Data
@@ -174,13 +174,13 @@ var Processor = function(canvasid) {
 		  data: postData
 		}).done(function( msg ) {
 			if (msg.code == 0) {
-				alert("OKOKOKOK 得到了本地服务器的成功返回")
+				//alert("OKOKOKOK 得到了本地服务器的成功返回")
 				processor.state = processor.STATE.tip;
-				setTimeout("processor.state = processor.STATE.waiting;", 5000)
+				setTimeout("processor.state = processor.STATE.waiting;", 10000)
 			} else {
-				alert("得不到成功返回呀")
+				//alert("得不到成功返回呀")
 				processor.state = processor.STATE.tip;
-				setTimeout("processor.state = processor.STATE.waiting;", 5000)
+				setTimeout("processor.state = processor.STATE.waiting;", 10000)
 			}
 		});
 
@@ -261,7 +261,7 @@ var Processor = function(canvasid) {
 			new fadeSound("bg", false, 0.5);
 			this.state = this.STATE.running;
 			// RESET
-			this.startTime = + new Date();
+			this.startTime = new Date();
 			this.emotionsRecord = "";
 			this.faceBase64Data = "";
 		}
@@ -276,7 +276,7 @@ var Processor = function(canvasid) {
 					this.age = (parseInt(ages[0]) + parseInt(ages[1])) / 2
 			}
 			if (this.face.appearance.gender != "Unknown") {
-				this.age = this.face.appearance.gender == "Female" ? "woman" : "man"
+				this.gender = this.face.appearance.gender == "Female" ? "woman" : "man"
 			}
 		}
 	}
