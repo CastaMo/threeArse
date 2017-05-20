@@ -4,3 +4,7 @@ dist/
 threeArse.json
 
 main/test.pdf
+
+main/temp/avatar/*.jpeg
+
+main/temp/emotion/*.jpeg
